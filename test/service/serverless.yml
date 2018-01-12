@@ -1,0 +1,48 @@
+# Test service for serverless-athena-plugin
+service: serverless-athena-plugin-test
+plugins:
+  - serverless-athena-plugin
+provider:
+  name: aws
+  runtime: nodejs6.10
+  stage: plugintest
+  region: us-west-2
+  deploymentBucket: ${env:DEPLOYMENT_BUCKET_NAME}
+  environment:
+    ATHENA_DB_NAME: ${env:ATHENA_DB_NAME}
+  stackTags:
+    Owner: owner@example.org
+    Test: test
+
+resources:
+  Resources:
+    TestBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:service}-test1
+
+custom:
+  athenaTables:
+    testTable1:
+      TableName: athena_${self:provider.stage}_1
+      DDLFile: resources/testTable1.ddl
+      DDLSubstitutions:
+        TableName: athena_${self:provider.stage}_1
+        S3Location: s3://${self:service}-test1/stage=${self:provider.stage}
+        DatabaseName: ${env:ATHENA_DB_NAME}
+      OutputLocation: s3://${env:ATHENA_QUERY_OUTPUT_BUCKET_NAME}/${self:service}-test1/
+
+    testTable2:
+      DDL: >
+        CREATE EXTERNAL TABLE IF NOT EXISTS athena_${self:provider.stage}_2 (
+          name string,
+          happiness double,
+          timestamp double,
+          version string)
+        PARTITIONED BY (dt string)
+        ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
+        WITH SERDEPROPERTIES ('ignore.malformed.json'='true')
+        LOCATION 's3://${self:service}-test1/stage=${self:provider.stage}'
+
+      OutputLocation: s3://${env:ATHENA_QUERY_OUTPUT_BUCKET_NAME}/${self:service}-test2/
+      TableName: athena_${self:provider.stage}_2
