@@ -16,5 +16,7 @@
     "url": "https://github.com/fingerfoodstudios/serverless-athena-plugin/issues"
   },
   "homepage": "https://github.com/fingerfoodstudios/serverless-athena-plugin#readme",
-  "dependencies": {}
+  "dependencies": {
+    "bluebird": "^3.5.1"
+  }
 }
