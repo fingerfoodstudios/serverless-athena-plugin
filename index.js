@@ -249,7 +249,7 @@ class ServerlessAthenaPlugin {
         if (table.DDLSubstitutions) {
           return Promise.resolve(Object.entries(table.DDLSubstitutions).reduce(
             (modifiedDDL, replacement) =>
-              modifiedDDL.replace('${' + replacement[0] + '}', replacement[1]), ddl))
+              modifiedDDL.replace('{' + replacement[0] + '}', replacement[1]), ddl))
         }
         return Promise.resolve(ddl)
       })
