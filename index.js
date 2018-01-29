@@ -1,7 +1,6 @@
 const aws = require('aws-sdk');
 const Promise = require('bluebird')
 
-const athena = new aws.Athena()
 const readFile = Promise.promisify(require('fs').readFile)
 
 class ServerlessAthenaPlugin {
@@ -9,6 +8,7 @@ class ServerlessAthenaPlugin {
     this.serverless = serverless
     this.options = options
     aws.config.update({ region: this.serverless.service.provider.region })
+    this.athena = new aws.Athena()
 
     this.commands = {
       deploy: {
@@ -74,7 +74,7 @@ class ServerlessAthenaPlugin {
   waitForAthenaQuery(id) {
     return new Promise((resolve, reject) => {
       const isQueryComplete = () =>
-        athena.getQueryExecution({ QueryExecutionId: id }).promise()
+        this.athena.getQueryExecution({ QueryExecutionId: id }).promise()
           .then((response) => {
             switch (response.QueryExecution.Status.State) {
               case 'SUCCEEDED':
@@ -207,7 +207,7 @@ class ServerlessAthenaPlugin {
       return Promise.reject(new Error(`Athena table not found: ${table}`))
     }
 
-    // Table option not set, create all tables
+    // Table option not set, remove all tables
     if (Object.keys(athenaTables).length > 0) {
       this.serverless.cli.log('Removing all Athena tables...')
       return this.deleteAthenaTables(athenaTables)
@@ -223,7 +223,8 @@ class ServerlessAthenaPlugin {
    * @param tables
    */
   createAthenaTables(tables) {
-    return Promise.map(Object.entries(tables), tableEntry => this.createAthenaTable(...tableEntry))
+    return Promise.map(Object.entries(tables), tableEntry => this.createAthenaTable(...tableEntry),
+      { concurrency: 1 })
       .then(() => {
         this.serverless.cli.log('Athena tables created successfully.')
         return Promise.resolve()
@@ -265,7 +266,7 @@ class ServerlessAthenaPlugin {
           params.QueryExecutionContext = { Database: envVars.ATHENA_DB_NAME }
         }
         this.serverless.cli.log(`Creating Athena table ${tableName}...`)
-        return athena.startQueryExecution(params).promise()
+        return this.athena.startQueryExecution(params).promise()
       })
       .then(executionResponse => this.waitForAthenaQuery(executionResponse.QueryExecutionId))
   }
@@ -276,7 +277,8 @@ class ServerlessAthenaPlugin {
    * @param tables
    */
   deleteAthenaTables(tables) {
-    return Promise.map(Object.entries(tables), tableEntry => this.deleteAthenaTable(...tableEntry))
+    return Promise.map(Object.entries(tables), tableEntry => this.deleteAthenaTable(...tableEntry),
+      { concurrency: 1 })
       .then(() => {
         this.serverless.cli.log('Athena tables deleted successfully.')
         return Promise.resolve()
@@ -300,7 +302,7 @@ class ServerlessAthenaPlugin {
       params.QueryExecutionContext = { Database: envVars.ATHENA_DB_NAME }
     }
     this.serverless.cli.log(`Removing Athena table ${tableName} (${table.TableName})...`)
-    return athena.startQueryExecution(params).promise()
+    return this.athena.startQueryExecution(params).promise()
       .then(executionResponse => this.waitForAthenaQuery(executionResponse.QueryExecutionId))
   }
 
