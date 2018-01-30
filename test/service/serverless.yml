@@ -8,8 +8,6 @@ provider:
   stage: plugintest
   region: us-west-2
   deploymentBucket: ${env:DEPLOYMENT_BUCKET_NAME}
-  environment:
-    ATHENA_DB_NAME: ${env:ATHENA_DB_NAME}
   stackTags:
     Owner: owner@example.org
     Test: test
@@ -29,8 +27,8 @@ custom:
       DDLSubstitutions:
         TableName: athena_${self:provider.stage}_1
         S3Location: s3://${self:service}-test1/stage=${self:provider.stage}
-        DatabaseName: ${env:ATHENA_DB_NAME}
       OutputLocation: s3://${env:ATHENA_QUERY_OUTPUT_BUCKET_NAME}/${self:service}-test1/
+      DatabaseName: ${env:ATHENA_DB_NAME}
 
     testTable2:
       DDL: >
@@ -46,3 +44,4 @@ custom:
 
       OutputLocation: s3://${env:ATHENA_QUERY_OUTPUT_BUCKET_NAME}/${self:service}-test2/
       TableName: athena_${self:provider.stage}_2
+      DatabaseName: ${env:ATHENA_DB_NAME}

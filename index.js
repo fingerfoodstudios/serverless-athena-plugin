@@ -118,6 +118,9 @@ class ServerlessAthenaPlugin {
       throw new this.serverless.classes.Error(
         `Definition for Athena table ${tableName} must include TableName to allow dropping the table on remove.`)
     }
+    if (!table.DatabaseName) {
+      this.serverless.cli.log(`Warning: Athena table ${tableName} definition does not include DatabaseName; default database will be used`)
+    }
     return Promise.resolve()
   }
 
@@ -255,15 +258,12 @@ class ServerlessAthenaPlugin {
         return Promise.resolve(ddl)
       })
       .then((ddl) => {
-        console.log(ddl)
         const params = {
           QueryString: ddl,
           ResultConfiguration: { OutputLocation: table.OutputLocation }
         }
-        const envVars = this.serverless.service.provider.environment || {}
-        if (envVars.ATHENA_DB_NAME) {
-          console.log(`set QueryExecutionContext to ${envVars.ATHENA_DB_NAME}`)
-          params.QueryExecutionContext = { Database: envVars.ATHENA_DB_NAME }
+        if (table.DatabaseName) {
+          params.QueryExecutionContext = { Database: table.DatabaseName }
         }
         this.serverless.cli.log(`Creating Athena table ${tableName}...`)
         return this.athena.startQueryExecution(params).promise()
@@ -297,9 +297,8 @@ class ServerlessAthenaPlugin {
       QueryString: `DROP TABLE ${ifExists ? 'IF EXISTS' : ''} ${table.TableName}`,
       ResultConfiguration: { OutputLocation: table.OutputLocation }
     }
-    const envVars = this.serverless.service.provider.environment || {}
-    if (envVars.ATHENA_DB_NAME) {
-      params.QueryExecutionContext = { Database: envVars.ATHENA_DB_NAME }
+    if (table.DatabaseName) {
+      params.QueryExecutionContext = { Database: table.DatabaseName }
     }
     this.serverless.cli.log(`Removing Athena table ${tableName} (${table.TableName})...`)
     return this.athena.startQueryExecution(params).promise()
